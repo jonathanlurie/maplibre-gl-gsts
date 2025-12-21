@@ -5,8 +5,6 @@ const appDiv = document.getElementById('app') as HTMLDivElement;
 
 
 (async () => {
-
-  // const tileUrl = "12-2126-1453.webp";
   // const tileUrl = "https://tiles.mapterhorn.com/12/2126/1456.webp";
   // const tileUrl = "https://tiles.mapterhorn.com/14/8508/5824.webp";
   // const tileUrl = "https://tiles.mapterhorn.com/14/8515/5811.webp";
