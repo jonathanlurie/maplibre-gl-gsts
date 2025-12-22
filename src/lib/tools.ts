@@ -1,3 +1,4 @@
+import type { TerrainEncoding } from "./GSTS";
 import type { TileIndex } from "./types";
 
 export type FloatImage = {
@@ -202,7 +203,7 @@ export function makeBlurryCopy(canvas: HTMLCanvasElement, blurSize: number): HTM
 }
 
 
-export function getElevationData(canvas: HTMLCanvasElement): FloatImage {
+export function getElevationData(canvas: HTMLCanvasElement, terrainEncoding: TerrainEncoding): FloatImage {
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
   const imgInfo = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -213,7 +214,9 @@ export function getElevationData(canvas: HTMLCanvasElement): FloatImage {
   const elevationData = new Float32Array(nbPixels);
 
   for (let i = 0; i < nbPixels; i += 1) {
-    elevationData[i]  = (data[i * 4] * 256 + data[i * 4 + 1] + data[i * 4 + 2] / 256) - 32768;
+    if (terrainEncoding === "terrarium") {
+      elevationData[i]  = (data[i * 4] * 256 + data[i * 4 + 1] + data[i * 4 + 2] / 256) - 32768;
+    }
   }
 
   return {
@@ -355,6 +358,21 @@ export function wrapTileIndex(tileIndex: TileIndex): TileIndex {
   } as TileIndex;
 }
 
+export type TileDirection = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
+
+export function getNeighborIndex(tileIndex: TileIndex, direction: TileDirection): TileIndex {
+  switch(direction) {
+    case "N": return {z: tileIndex.z, x: tileIndex.x, y: tileIndex.y - 1};
+    case "NE": return {z: tileIndex.z, x: tileIndex.x + 1, y: tileIndex.y - 1};
+    case "E": return {z: tileIndex.z, x: tileIndex.x + 1, y: tileIndex.y};
+    case "SE": return {z: tileIndex.z, x: tileIndex.x + 1, y: tileIndex.y + 1};
+    case "S": return {z: tileIndex.z, x: tileIndex.x, y: tileIndex.y + 1};
+    case "SW": return {z: tileIndex.z, x: tileIndex.x - 1, y: tileIndex.y + 1};
+    case "W": return {z: tileIndex.z, x: tileIndex.x - 1, y: tileIndex.y};
+    case "NW": return {z: tileIndex.z, x: tileIndex.x - 1, y: tileIndex.y - 1};
+  }
+}
+
 /**
  * The mosaic is an array with the following order:
  * - center tile
@@ -385,11 +403,24 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
   }
 
   const finalSize = ts + 2 * padding;
-  const canvas = new OffscreenCanvas(finalSize, finalSize);
+  const canvas = document.createElement("canvas")
+  canvas.width = finalSize;
+  canvas.height = finalSize;
+  // const canvas = new OffscreenCanvas(finalSize, finalSize);
   const ctx = canvas.getContext("2d");
 
   if (!ctx) {
     throw new Error("Non existing canas context")
+  }
+
+   // center
+   if (mosaic[0]) {
+    const img = mosaic[0];
+    ctx.drawImage(
+      img,
+      0, 0, ts, ts,   // source rectangle (in ImageBitmap space)
+      padding, padding, ts, ts    // destination rectangle (in canvas space)
+    )
   }
 
   // north
@@ -458,13 +489,13 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
     ctx.drawImage(
       img,
       ts - padding - 1, 0, padding, ts,   // source rectangle (in ImageBitmap space)
-      0, padding, padding, padding    // destination rectangle (in canvas space)
+      0, padding, padding, ts    // destination rectangle (in canvas space)
     )
   }
 
   // north-west
-  if (mosaic[7]) {
-    const img = mosaic[7];
+  if (mosaic[8]) {
+    const img = mosaic[8];
     ctx.drawImage(
       img,
       ts - padding - 1, ts - padding - 1, padding, padding,   // source rectangle (in ImageBitmap space)
@@ -472,4 +503,25 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
     )
   }
 
+  return canvas;
+}
+
+
+export async function trimPaddedTile(inputCanvas: OffscreenCanvas | HTMLCanvasElement, tileSize: number, padding: number): Promise<ImageBitmap> {
+  return await createImageBitmap(
+    inputCanvas,
+    padding, padding, tileSize, tileSize
+  );
+}
+
+export function imageBitmapToCanvas(imageBitmap: ImageBitmap): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+
+  // imageBitmap is assumed to exist
+  canvas.width = imageBitmap.width;
+  canvas.height = imageBitmap.height;
+
+  ctx.drawImage(imageBitmap, 0, 0);
+  return canvas;
 }

@@ -7,63 +7,62 @@ export type TileCacheOptions = {
 };
 
 export class TileCache {
-  private readonly texturePool: QuickLRU<string, ImageBitmap>;
-  private readonly unavailableTextures = new Set<string>();
+  private readonly tilePool: QuickLRU<string, ImageBitmap>;
+  private readonly unavailableTiles = new Set<string>();
 
   constructor(options: TileCacheOptions = {}) {
     const cacheSize = options.cacheSize ?? 1000;
 
-    this.texturePool = new QuickLRU<string, ImageBitmap>({
+    this.tilePool = new QuickLRU<string, ImageBitmap>({
       maxSize: cacheSize,
 
       onEviction(_key: string, value: ImageBitmap) {
-        console.log("Freeing texture from GPU memory");
         value.close();
       },
     });
   }
 
   /**
-   * Get a texture from its z/x/y index
+   * Get a tile from its z/x/y index
    * If a tile is already in the cache, it will be retrieved from the cache.
-   * If a texture already failed to be retrieved, it is not trying again.
+   * If a tile already failed to be retrieved, it is not trying again.
    */
-  getTexture(tileIndex: TileIndex, textureUrlPattern: string): Promise<ImageBitmap> {
-    return new Promise((resolve, reject) => {
+  getTile(tileIndex: TileIndex, urlPattern: string): Promise<ImageBitmap | null> {
+    return new Promise((resolve) => {
       const tileIndexWrapped = wrapTileIndex(tileIndex);
-      const textureURL = textureUrlPattern
+      const tileUrl = urlPattern
         .replace("{x}", tileIndexWrapped.x.toString())
         .replace("{y}", tileIndexWrapped.y.toString())
         .replace("{z}", tileIndexWrapped.z.toString());
 
-      // The texture is not existing. An unfruitful attempt was made already
-      if (this.unavailableTextures.has(textureURL)) {
-        return reject(new Error("Could not load tile data."));
+      // The tile is not existing. An unfruitful attempt was made already
+      if (this.unavailableTiles.has(tileUrl)) {
+        return resolve(null);
       }
 
-      // The texture is in the pool of already fetched textures
-      if (this.texturePool.has(textureURL)) {
-        resolve(this.texturePool.get(textureURL) as ImageBitmap);
+      // The tile is in the pool of already fetched tiles
+      if (this.tilePool.has(tileUrl)) {
+        resolve(this.tilePool.get(tileUrl) as ImageBitmap);
         return;
       }
 
-      fetchAsImageBitmap(textureURL)
+      fetchAsImageBitmap(tileUrl)
       .then((imgBtmp) => {
-        this.texturePool.set(textureURL, imgBtmp);
+        this.tilePool.set(tileUrl, imgBtmp);
         resolve(imgBtmp);
       })
       .catch(() => {
-        this.unavailableTextures.add(textureURL);
-        reject(new Error("Could not load texture."));
+        this.unavailableTiles.add(tileUrl);
+        resolve(null);
       })
     });
   }
 
   /**
-   * Clear the texture cache
+   * Clear the tile cache
    */
   clear() {
-    this.texturePool.clear();
-    this.unavailableTextures.clear();
+    this.tilePool.clear();
+    this.unavailableTiles.clear();
   }
 }

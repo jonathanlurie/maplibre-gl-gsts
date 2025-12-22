@@ -1,10 +1,11 @@
 import './style.css'
-import { buildGaussianKernel, buildGaussianKernelFromRadius, computeElevationDelta, fetchAsImageBitmap, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, loadImg, loadImgFetch, makeBlurryCopy, makeEaseOuSineFilter, maxFloatImages, sumFloatImages } from './lib/tools.ts';
+import { buildGaussianKernel, buildGaussianKernelFromRadius, computeElevationDelta, fetchAsImageBitmap, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, imageBitmapToCanvas, loadImg, loadImgFetch, makeBlurryCopy, makeEaseOuSineFilter, maxFloatImages, sumFloatImages } from './lib/tools.ts';
+import { GSTS } from './lib/GSTS.ts';
 
 const appDiv = document.getElementById('app') as HTMLDivElement;
 
 
-(async () => {
+const f1 = async () => {
   // const tileUrl = "https://tiles.mapterhorn.com/12/2126/1456.webp";
   // const tileUrl = "https://tiles.mapterhorn.com/14/8508/5824.webp";
   // const tileUrl = "https://tiles.mapterhorn.com/14/8515/5811.webp";
@@ -99,4 +100,17 @@ const appDiv = document.getElementById('app') as HTMLDivElement;
   
   appDiv.append(outputCanvas);
 
-})()
+}
+
+const f2 = async () => {
+  const gsts = new GSTS({
+    urlPattern: "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
+    terrainEncoding: "terrarium",
+  });
+
+  const tileImageBitmap = await gsts.computeTile({z: 12, x: 2127, y: 1454});
+  const canvas = imageBitmapToCanvas(tileImageBitmap);
+  appDiv.append(canvas);
+}
+
+f2();
