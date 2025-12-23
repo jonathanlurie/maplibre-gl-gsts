@@ -108,7 +108,20 @@ const f2 = async () => {
     terrainEncoding: "terrarium",
   });
 
-  const tileImageBitmap = await gsts.computeTileWr({z: 12, x: 2127, y: 1454});
+  const tileImageBitmap = await gsts.computeTileWr(
+    {z: 2, x: 40, y: 1},
+    // {z: 3, x: 4, y: 2},
+    // {z: 4, x: 8, y: 5},
+    // {z: 5, x: 16, y: 11},
+    // {z: 6, x: 33, y: 23},
+    // {z: 7, x: 66, y: 46},
+    // {z: 8, x: 133, y: 93},
+    // {z: 9, x: 264, y: 182}
+    // {z: 10, x: 530, y: 365},
+    // {z: 11, x: 1060, y: 731},
+    // {z: 12, x: 2127, y: 1454}
+    
+  );
   const canvas = imageBitmapToCanvas(tileImageBitmap);
   appDiv.append(canvas);
 }

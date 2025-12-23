@@ -1,9 +1,10 @@
+import type { GaussianScaleSpaceWeights } from "./gaussianScaleSpaceWeights";
 import type { TileProcesingWorkerMessage } from "./GSTS"
 import { computeElevationDelta, createPaddedTileOffscreenCanvas, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, makeEaseOuSineFilter, sumFloatImages, trimPaddedTile } from "./tools";
 
 
 self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
-  const {imageBitmaps, padding, terrainEncoding} = e.data;
+  const {imageBitmaps, padding, terrainEncoding, gaussianScaleSpaceWeights} = e.data;
   const tileSize = imageBitmaps[0]?.width ?? 512;
 
   const paddedTileCanvas = createPaddedTileOffscreenCanvas(imageBitmaps, padding);
@@ -22,17 +23,17 @@ self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
   const eleDeltaBlur7 = computeElevationDelta(blurredElevation7, elevationData, true);
   const eleDeltaBlur3 = computeElevationDelta(blurredElevation3, elevationData, true);
 
-  const intensityFactor = 1;
   const multiResDelta = sumFloatImages([
-    {fImg: eleDeltaBlur60, ratio: 0.5 * intensityFactor},
-    {fImg: eleDeltaBlur30, ratio: 4 * intensityFactor},
-    {fImg: eleDeltaBlur15, ratio: 4 * intensityFactor},
-    {fImg: eleDeltaBlur7, ratio: 12 * intensityFactor},
-    {fImg: eleDeltaBlur3, ratio: 10 * intensityFactor},
+    {fImg: eleDeltaBlur60, ratio: gaussianScaleSpaceWeights.hKernel60 },
+    {fImg: eleDeltaBlur30, ratio: gaussianScaleSpaceWeights.hKernel30 },
+    {fImg: eleDeltaBlur15, ratio: gaussianScaleSpaceWeights.hKernel15 },
+    {fImg: eleDeltaBlur7, ratio: gaussianScaleSpaceWeights.hKernel7 },
+    {fImg: eleDeltaBlur3, ratio: gaussianScaleSpaceWeights.hKernel3 },
   ]);
 
-  const filteredMultiResDelta = filterFloatImage(multiResDelta, makeEaseOuSineFilter(2800, 255))
+  console.log("max value", multiResDelta.data.reduce((pix, acc) => Math.max(pix, acc), 0));
 
+  const filteredMultiResDelta = filterFloatImage(multiResDelta, makeEaseOuSineFilter(3000, 255))
   const paddedShadedTile = floatImageToCanvas(filteredMultiResDelta, 1, 0);
   const trimmedShadedImageBitmap = await trimPaddedTile(paddedShadedTile, tileSize, padding);
    
