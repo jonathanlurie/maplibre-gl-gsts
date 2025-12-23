@@ -203,11 +203,9 @@ export function makeBlurryCopy(canvas: HTMLCanvasElement, blurSize: number): HTM
 }
 
 
-export function getElevationData(canvas: HTMLCanvasElement, terrainEncoding: TerrainEncoding): FloatImage {
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-
+export function getElevationData(canvas: OffscreenCanvas, terrainEncoding: TerrainEncoding): FloatImage {
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
   const imgInfo = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  console.log(imgInfo);
   const data = imgInfo.data;
 
   const nbPixels = canvas.width * canvas.height;
@@ -245,11 +243,9 @@ export function computeElevationDelta(eleA: FloatImage, eleB: FloatImage, keepPo
 }
 
 
-export function floatImageToCanvas(fImg: FloatImage, scale = 1, offset = 0): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = fImg.width;
-  canvas.height = fImg.height;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+export function floatImageToCanvas(fImg: FloatImage, scale = 1, offset = 0): OffscreenCanvas {
+  const canvas = new OffscreenCanvas(fImg.width, fImg.height);
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
 
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const pixels = imgData.data;
@@ -259,10 +255,7 @@ export function floatImageToCanvas(fImg: FloatImage, scale = 1, offset = 0): HTM
     pixels[i * 4 + 1] = 0;
     pixels[i * 4 + 2] = 0;
     pixels[i * 4 + 3] = Math.max(0, Math.min(255, fImg.data[i] * scale + offset));
-  }
-
-  console.log("pixels", pixels);
-  
+  }  
 
   ctx.putImageData(imgData, 0, 0);
   return canvas;
@@ -403,10 +396,10 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
   }
 
   const finalSize = ts + 2 * padding;
-  const canvas = document.createElement("canvas")
-  canvas.width = finalSize;
-  canvas.height = finalSize;
-  // const canvas = new OffscreenCanvas(finalSize, finalSize);
+  // const canvas = document.createElement("canvas")
+  // canvas.width = finalSize;
+  // canvas.height = finalSize;
+  const canvas = new OffscreenCanvas(finalSize, finalSize);
   const ctx = canvas.getContext("2d");
 
   if (!ctx) {

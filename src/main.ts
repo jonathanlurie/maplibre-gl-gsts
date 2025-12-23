@@ -108,7 +108,7 @@ const f2 = async () => {
     terrainEncoding: "terrarium",
   });
 
-  const tileImageBitmap = await gsts.computeTile({z: 12, x: 2127, y: 1454});
+  const tileImageBitmap = await gsts.computeTileWr({z: 12, x: 2127, y: 1454});
   const canvas = imageBitmapToCanvas(tileImageBitmap);
   appDiv.append(canvas);
 }
