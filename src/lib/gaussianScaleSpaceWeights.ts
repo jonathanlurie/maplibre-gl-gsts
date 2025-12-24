@@ -101,4 +101,90 @@ export const defaultGaussianScaleSpaceWeights: GaussianScaleSpaceWeightsPerZoomL
     hKernel7: 10,
     hKernel3: 12,
   },
+
+  13: {
+    hKernel60: 4,
+    hKernel30: 8,
+    hKernel15: 3,
+    hKernel7: 15,
+    hKernel3: 20,
+  },
+
+  14: {
+    hKernel60: 10,
+    hKernel30: 4,
+    hKernel15: 6,
+    hKernel7: 12,
+    hKernel3: 12,
+  },
+
+  15: {
+    hKernel60: 15,
+    hKernel30: 8,
+    hKernel15: 10,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  16: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  17: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  18: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  19: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  20: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  21: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
+
+  // same as 16
+  22: {
+    hKernel60: 30,
+    hKernel30: 25,
+    hKernel15: 25,
+    hKernel7: 18,
+    hKernel3: 20,
+  },
 } as const;
