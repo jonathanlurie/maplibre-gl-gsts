@@ -3,3 +3,5 @@ export type TileIndex = {
   x: number;
   y: number;
 };
+
+export type RGBColor = [number, number, number]

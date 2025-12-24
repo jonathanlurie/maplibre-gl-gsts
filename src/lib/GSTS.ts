@@ -1,6 +1,6 @@
 import { TileCache } from "./TileCache";
 import { getNeighborIndex } from "./tools";
-import type { TileIndex } from "./types";
+import type { RGBColor, TileIndex } from "./types";
 import TileWorker from "./tile-worker?worker&inline";
 import { defaultGaussianScaleSpaceWeights, type GaussianScaleSpaceWeights, type GaussianScaleSpaceWeightsPerZoomLevel } from "./gaussianScaleSpaceWeights";
 
@@ -12,12 +12,14 @@ export type TileProcesingWorkerMessage = {
   padding: number,
   terrainEncoding: TerrainEncoding,
   gaussianScaleSpaceWeights: GaussianScaleSpaceWeights,
+  color: RGBColor,
 }
 
 export type GSTSOptions = {
   urlPattern: string,
   terrainEncoding: TerrainEncoding;
   gaussianScaleSpaceWeights?: GaussianScaleSpaceWeightsPerZoomLevel
+  color?: RGBColor,
 }
 
 /**
@@ -29,6 +31,7 @@ export class GSTS {
   private readonly padding = 30;
   private readonly terrainEncoding: TerrainEncoding;
   private readonly gaussianScaleSpaceWeights: GaussianScaleSpaceWeightsPerZoomLevel;
+  private readonly color: RGBColor
 
   constructor(options: GSTSOptions) {
     this.urlPattern = options.urlPattern;
@@ -37,6 +40,7 @@ export class GSTS {
       ...defaultGaussianScaleSpaceWeights,
       ...(options.gaussianScaleSpaceWeights ?? {}),
     }
+    this.color = options.color ?? [0, 0, 0];
   }
 
   async computeTileWr(tileIndex: TileIndex): Promise<ImageBitmap> {
@@ -64,6 +68,7 @@ export class GSTS {
         imageBitmaps,
         padding: this.padding,
         gaussianScaleSpaceWeights: this.gaussianScaleSpaceWeights[tileIndex.z],
+        color: this.color,
       }, imageBitmaps.filter((el) => el !== null));
       
       tileWorker.onmessage = (e: MessageEvent<ImageBitmap>) => {

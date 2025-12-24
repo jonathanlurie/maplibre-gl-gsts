@@ -1,5 +1,5 @@
 import type { TerrainEncoding } from "./GSTS";
-import type { TileIndex } from "./types";
+import type { RGBColor, TileIndex } from "./types";
 
 export type FloatImage = {
   width: number,
@@ -243,7 +243,7 @@ export function computeElevationDelta(eleA: FloatImage, eleB: FloatImage, keepPo
 }
 
 
-export function floatImageToCanvas(fImg: FloatImage, scale = 1, offset = 0): OffscreenCanvas {
+export function floatImageToCanvas(fImg: FloatImage, color: RGBColor): OffscreenCanvas {
   const canvas = new OffscreenCanvas(fImg.width, fImg.height);
   const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
 
@@ -251,10 +251,10 @@ export function floatImageToCanvas(fImg: FloatImage, scale = 1, offset = 0): Off
   const pixels = imgData.data;
 
   for (let i = 0, n = fImg.data.length; i < n; i += 1) {
-    pixels[i * 4 ] = 0;
-    pixels[i * 4 + 1] = 0;
-    pixels[i * 4 + 2] = 0;
-    pixels[i * 4 + 3] = Math.max(0, Math.min(255, fImg.data[i] * scale + offset));
+    pixels[i * 4 ] = color[0];
+    pixels[i * 4 + 1] = color[1];
+    pixels[i * 4 + 2] = color[2];
+    pixels[i * 4 + 3] = Math.max(0, Math.min(255, fImg.data[i]));
   }  
 
   ctx.putImageData(imgData, 0, 0);

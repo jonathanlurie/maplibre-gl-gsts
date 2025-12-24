@@ -1,10 +1,9 @@
-import type { GaussianScaleSpaceWeights } from "./gaussianScaleSpaceWeights";
 import type { TileProcesingWorkerMessage } from "./GSTS"
 import { computeElevationDelta, createPaddedTileOffscreenCanvas, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, makeEaseOuSineFilter, sumFloatImages, trimPaddedTile } from "./tools";
 
 
 self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
-  const {imageBitmaps, padding, terrainEncoding, gaussianScaleSpaceWeights} = e.data;
+  const {imageBitmaps, padding, terrainEncoding, gaussianScaleSpaceWeights, color} = e.data;
   const tileSize = imageBitmaps[0]?.width ?? 512;
 
   const paddedTileCanvas = createPaddedTileOffscreenCanvas(imageBitmaps, padding);
@@ -34,7 +33,7 @@ self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
   console.log("max value", multiResDelta.data.reduce((pix, acc) => Math.max(pix, acc), 0));
 
   const filteredMultiResDelta = filterFloatImage(multiResDelta, makeEaseOuSineFilter(3000, 255))
-  const paddedShadedTile = floatImageToCanvas(filteredMultiResDelta, 1, 0);
+  const paddedShadedTile = floatImageToCanvas(filteredMultiResDelta, color);
   const trimmedShadedImageBitmap = await trimPaddedTile(paddedShadedTile, tileSize, padding);
    
   self.postMessage(trimmedShadedImageBitmap, [trimmedShadedImageBitmap])

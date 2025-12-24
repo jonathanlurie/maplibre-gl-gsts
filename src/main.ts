@@ -106,6 +106,7 @@ const f2 = async () => {
   const gsts = new GSTS({
     urlPattern: "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp",
     terrainEncoding: "terrarium",
+    color: [12, 34, 69],
   });
 
   const tileImageBitmap = await gsts.computeTileWr(
