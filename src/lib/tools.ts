@@ -178,8 +178,8 @@ export async function loadImgFetch(url: string): Promise<HTMLImageElement | null
   });
 }
 
-export async function fetchAsImageBitmap(url: string): Promise<ImageBitmap> {
-  const response = await fetch(url);
+export async function fetchAsImageBitmap(url: string, abortSignal: AbortSignal): Promise<ImageBitmap> {
+  const response = await fetch(url, {signal: abortSignal});
   if (!response.ok) {
     throw new Error(`Fetch failed: ${response.status}`);
   }

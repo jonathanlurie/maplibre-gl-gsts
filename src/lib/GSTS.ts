@@ -29,7 +29,7 @@ export type GSTSOptions = {
 export class GSTS {
   private readonly urlPattern: string;
   private readonly tileCache = new TileCache();
-  private readonly padding = 30;
+  private readonly padding = 60;
   private readonly terrainEncoding: TerrainEncoding;
   private readonly gaussianScaleSpaceWeights: GaussianScaleSpaceWeightsPerZoomLevel;
   private readonly color: RGBColor
@@ -44,29 +44,41 @@ export class GSTS {
     this.color = options.color ?? [0, 0, 0];
   }
 
-  async computeTile(tileIndex: TileIndex): Promise<ImageBitmap> {
+  async computeTile(tileIndex: TileIndex,
+    options: {
+      abortSignal: AbortSignal,
+    }
+  ): Promise<ImageBitmap | null> {
     const tilePromises = await Promise.allSettled([
-      this.tileCache.getTile(tileIndex, this.urlPattern), // center
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern), // north
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NE"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "E"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SE"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "S"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SW"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "W"), this.urlPattern),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern),
-    ])
+      this.tileCache.getTile(tileIndex, this.urlPattern, options.abortSignal), // center
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern, options.abortSignal), // north
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "NE"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "E"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "SE"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "S"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "SW"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "W"), this.urlPattern, options.abortSignal),
+      this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern, options.abortSignal),
+    ]);
 
+    if( options.abortSignal.aborted || !tilePromises[0]) {
+      return null;
+    }
+    
     const imageBitmaps = tilePromises.map((res) => res.status === "fulfilled" ? res.value : null);
     const paddedCanvas = createPaddedTileOffscreenCanvas(imageBitmaps, this.padding);
-
     const paddedTile = await createImageBitmap(paddedCanvas);
-
     const tileSize = imageBitmaps[0]?.width as number;
-    
 
     return new Promise((resolve) => {
       const tileWorker = new TileWorker();
+
+      options.abortSignal.addEventListener("abort", () => {
+        console.log("ABORT tile: ", tileIndex);
+        tileWorker.terminate();
+      },
+      // { once: true },
+    );
 
       tileWorker.postMessage({
         tileIndex,
@@ -76,11 +88,7 @@ export class GSTS {
         padding: this.padding,
         gaussianScaleSpaceWeights: this.gaussianScaleSpaceWeights[tileIndex.z],
         color: this.color,
-      }, 
-      [
-        paddedTile,
-      ]
-      );
+      }, [paddedTile]);
       
       tileWorker.onmessage = (e: MessageEvent<ImageBitmap>) => {
         tileWorker.terminate();

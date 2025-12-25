@@ -27,7 +27,7 @@ export class TileCache {
    * If a tile is already in the cache, it will be retrieved from the cache.
    * If a tile already failed to be retrieved, it is not trying again.
    */
-  getTile(tileIndex: TileIndex, urlPattern: string): Promise<ImageBitmap | null> {
+  getTile(tileIndex: TileIndex, urlPattern: string, abortSignal: AbortSignal): Promise<ImageBitmap | null> {
     return new Promise((resolve) => {
       const tileIndexWrapped = wrapTileIndex(tileIndex);
       const tileUrl = urlPattern
@@ -46,7 +46,7 @@ export class TileCache {
         return;
       }
 
-      fetchAsImageBitmap(tileUrl)
+      fetchAsImageBitmap(tileUrl, abortSignal)
       .then((imgBtmp) => {
         this.tilePool.set(tileUrl, imgBtmp);
         resolve(imgBtmp);

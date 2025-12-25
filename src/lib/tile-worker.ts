@@ -29,8 +29,6 @@ self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
     {fImg: eleDeltaBlur3, ratio: gaussianScaleSpaceWeights.hKernel3 },
   ]);
 
-  console.log("max value", multiResDelta.data.reduce((pix, acc) => Math.max(pix, acc), 0));
-
   const filteredMultiResDelta = filterFloatImage(multiResDelta, makeEaseOuSineFilter(3000, 255))
   const paddedShadedTile = floatImageToCanvas(filteredMultiResDelta, color);
   const trimmedShadedImageBitmap = await trimPaddedTile(paddedShadedTile, tileSize, padding);

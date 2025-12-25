@@ -51,11 +51,10 @@ const f3 = async () => {
       const x = Number.parseInt(urlParams.get("x") as string);
       const y = Number.parseInt(urlParams.get("y") as string);
 
-      console.log(z, x, y);
+      console.log("tile: ", z, x, y);
       
-
-      // const tile = await gsts.computeTile({ z, x, y }, { abortSignal: abortController?.signal });
-      const tile = await gsts.computeTile({ z, x, y });
+      const tile = await gsts.computeTile({ z, x, y }, { abortSignal: abortController?.signal });
+      // const tile = await gsts.computeTile({ z, x, y });
       if (cancelled()) throw new DOMException("Aborted", "AbortError");
 
       // MapLibre protocols can return ImageBitmap directly
