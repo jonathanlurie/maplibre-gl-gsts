@@ -33,29 +33,20 @@ const f3 = async () => {
   const gsts = new GSTS({
     urlPattern: mapterhornUrlPattern,
     terrainEncoding,
-    color: [12, 34, 69],
+    color: [36, 70, 125]
   });
 
 
   // Register custom protocol: gsts://{z}/{x}/{y}
   maplibregl.addProtocol("gsts", async ({ url }, abortController) => {
     try {
-      const cancelled = () => abortController?.signal?.aborted === true;
-
-      // Expect URLs like: gsts://16/34261/23134
       const urlObj = new URL(url);
-
       const urlParams = urlObj.searchParams
-
       const z = Number.parseInt(urlParams.get("z") as string);
       const x = Number.parseInt(urlParams.get("x") as string);
       const y = Number.parseInt(urlParams.get("y") as string);
-
-      console.log("tile: ", z, x, y);
       
       const tile = await gsts.computeTile({ z, x, y }, { abortSignal: abortController?.signal });
-      // const tile = await gsts.computeTile({ z, x, y });
-      if (cancelled()) throw new DOMException("Aborted", "AbortError");
 
       // MapLibre protocols can return ImageBitmap directly
       return { data: tile };
@@ -121,10 +112,27 @@ const f3 = async () => {
   map.addLayer({
     id: 'gsts-demo-layer',
     source: 'gsts-demo-source',
-    type: 'raster'
+    type: 'raster',
+    layout: {
+      visibility: "visible"
+    }
   }, "hillshader" );
 
   console.log(map);
+
+  const checkboxLayer = document.getElementById("toggle-layer-cb") as HTMLInputElement;
+  checkboxLayer.addEventListener("input", () => {
+    console.log(checkboxLayer.checked);
+
+    const isVisible = map.getLayoutProperty("gsts-demo-layer", "visibility") === "visible";
+
+    if (isVisible) {
+      map.setLayoutProperty("gsts-demo-layer", "visibility", "none");
+    } else {
+      map.setLayoutProperty("gsts-demo-layer", "visibility", "visible");
+    }
+     
+  })
   
 }
 
