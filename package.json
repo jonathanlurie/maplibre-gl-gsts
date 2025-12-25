@@ -16,6 +16,9 @@
     "vite": "npm:rolldown-vite@7.2.5"
   },
   "dependencies": {
+    "basemapkit": "^0.5.0",
+    "maplibre-gl": "^5.15.0",
+    "pmtiles": "^4.3.1",
     "quick-lru": "^7.3.0"
   }
 }

@@ -1,14 +1,13 @@
 import type { TileProcesingWorkerMessage } from "./GSTS"
-import { computeElevationDelta, createPaddedTileOffscreenCanvas, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, makeEaseOuSineFilter, sumFloatImages, trimPaddedTile } from "./tools";
+import { computeElevationDelta, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, imageBitmapToOffscreenCanvas, makeEaseOuSineFilter, sumFloatImages, trimPaddedTile } from "./tools";
 
 
 self.onmessage = async (e: MessageEvent<TileProcesingWorkerMessage>) => {
-  const {imageBitmaps, padding, terrainEncoding, gaussianScaleSpaceWeights, color} = e.data;
-  const tileSize = imageBitmaps[0]?.width ?? 512;
+  const {paddedTile, tileSize, padding, terrainEncoding, gaussianScaleSpaceWeights, color} = e.data;
 
-  const paddedTileCanvas = createPaddedTileOffscreenCanvas(imageBitmaps, padding);
+  const paddedCanvas = imageBitmapToOffscreenCanvas(paddedTile);
 
-  const elevationData = getElevationData(paddedTileCanvas, terrainEncoding);
+  const elevationData = getElevationData(paddedCanvas, terrainEncoding);
 
   const blurredElevation60 = gaussianBlurImageData(elevationData, 60);
   const blurredElevation30 = gaussianBlurImageData(elevationData, 30);

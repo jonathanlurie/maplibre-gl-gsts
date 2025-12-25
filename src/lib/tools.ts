@@ -29,7 +29,7 @@ export function sigmaFromRadius(
 
 export function buildGaussianKernelFromRadius(
   radius: number,
-  centralMass: 0.90 | 0.95 | 0.98 | 0.99 | 0.995 | 0.997 | 0.999 = 0.9
+  centralMass: 0.90 | 0.95 | 0.98 | 0.99 | 0.995 | 0.997 | 0.999 = 0.95
 ): Float32Array {
   const sigma = sigmaFromRadius(radius, centralMass);
   return buildGaussianKernel(radius, sigma);
@@ -499,12 +499,18 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
   return canvas;
 }
 
-
 export async function trimPaddedTile(inputCanvas: OffscreenCanvas | HTMLCanvasElement, tileSize: number, padding: number): Promise<ImageBitmap> {
   return await createImageBitmap(
     inputCanvas,
     padding, padding, tileSize, tileSize
   );
+}
+
+export function imageBitmapToOffscreenCanvas(imageBitmap: ImageBitmap): OffscreenCanvas {
+  const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+  const ctx = canvas.getContext("2d") as OffscreenCanvasRenderingContext2D;
+  ctx.drawImage(imageBitmap, 0, 0);
+  return canvas;
 }
 
 export function imageBitmapToCanvas(imageBitmap: ImageBitmap): HTMLCanvasElement {

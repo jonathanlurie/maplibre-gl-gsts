@@ -1,5 +1,5 @@
 import { TileCache } from "./TileCache";
-import { getNeighborIndex } from "./tools";
+import { createPaddedTileOffscreenCanvas, getNeighborIndex } from "./tools";
 import type { RGBColor, TileIndex } from "./types";
 import TileWorker from "./tile-worker?worker&inline";
 import { defaultGaussianScaleSpaceWeights, type GaussianScaleSpaceWeights, type GaussianScaleSpaceWeightsPerZoomLevel } from "./gaussianScaleSpaceWeights";
@@ -8,11 +8,12 @@ export type TerrainEncoding = "terrarium" | "mapbox";
 
 export type TileProcesingWorkerMessage = {
   tileIndex: TileIndex,
-  imageBitmaps: (ImageBitmap | null)[],
+  paddedTile: ImageBitmap,
   padding: number,
   terrainEncoding: TerrainEncoding,
   gaussianScaleSpaceWeights: GaussianScaleSpaceWeights,
   color: RGBColor,
+  tileSize: number,
 }
 
 export type GSTSOptions = {
@@ -43,7 +44,7 @@ export class GSTS {
     this.color = options.color ?? [0, 0, 0];
   }
 
-  async computeTileWr(tileIndex: TileIndex): Promise<ImageBitmap> {
+  async computeTile(tileIndex: TileIndex): Promise<ImageBitmap> {
     const tilePromises = await Promise.allSettled([
       this.tileCache.getTile(tileIndex, this.urlPattern), // center
       this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern), // north
@@ -57,22 +58,31 @@ export class GSTS {
     ])
 
     const imageBitmaps = tilePromises.map((res) => res.status === "fulfilled" ? res.value : null);
+    const paddedCanvas = createPaddedTileOffscreenCanvas(imageBitmaps, this.padding);
+
+    const paddedTile = await createImageBitmap(paddedCanvas);
+
+    const tileSize = imageBitmaps[0]?.width as number;
+    
 
     return new Promise((resolve) => {
-      console.time("worker")
       const tileWorker = new TileWorker();
 
       tileWorker.postMessage({
         tileIndex,
+        tileSize,
         terrainEncoding: this.terrainEncoding,
-        imageBitmaps,
+        paddedTile,
         padding: this.padding,
         gaussianScaleSpaceWeights: this.gaussianScaleSpaceWeights[tileIndex.z],
         color: this.color,
-      }, imageBitmaps.filter((el) => el !== null));
+      }, 
+      [
+        paddedTile,
+      ]
+      );
       
       tileWorker.onmessage = (e: MessageEvent<ImageBitmap>) => {
-        console.timeEnd("worker")
         tileWorker.terminate();
         resolve(e.data)
       }
