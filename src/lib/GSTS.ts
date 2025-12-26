@@ -46,8 +46,8 @@ export class GSTS {
 
   async computeTile(tileIndex: TileIndex,
     options: {
-      abortSignal: AbortSignal,
-    }
+      abortSignal?: AbortSignal,
+    } = {}
   ): Promise<ImageBitmap | null> {
     const tilePromises = await Promise.allSettled([
       this.tileCache.getTile(tileIndex, this.urlPattern, options.abortSignal), // center
@@ -61,7 +61,11 @@ export class GSTS {
       this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern, options.abortSignal),
     ]);
 
-    if( options.abortSignal.aborted || !tilePromises[0]) {
+    if (tilePromises[0].status !== "fulfilled" || !tilePromises[0].value) {
+      return null;
+    }
+
+    if(options.abortSignal?.aborted) {
       return null;
     }
     
@@ -73,7 +77,7 @@ export class GSTS {
     return new Promise((resolve) => {
       const tileWorker = new TileWorker();
 
-      options.abortSignal.addEventListener("abort", () => {
+      options.abortSignal?.addEventListener("abort", () => {
         console.log("ABORT tile: ", tileIndex);
         tileWorker.terminate();
       },

@@ -96,7 +96,7 @@ export const defaultGaussianScaleSpaceWeights: GaussianScaleSpaceWeightsPerZoomL
   
   12: {
     hKernel60: 1.5,
-    hKernel30: 6,
+    hKernel30: 3,
     hKernel15: 3,
     hKernel7: 10,
     hKernel3: 12,
@@ -104,10 +104,10 @@ export const defaultGaussianScaleSpaceWeights: GaussianScaleSpaceWeightsPerZoomL
 
   13: {
     hKernel60: 4,
-    hKernel30: 8,
-    hKernel15: 3,
-    hKernel7: 15,
-    hKernel3: 20,
+    hKernel30: 4,
+    hKernel15: 10,
+    hKernel7: 10,
+    hKernel3: 15,
   },
 
   14: {

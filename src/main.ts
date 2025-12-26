@@ -115,8 +115,11 @@ const f3 = async () => {
     type: 'raster',
     layout: {
       visibility: "visible"
+    },
+    paint: {
+      "raster-opacity": 0.75
     }
-  }, "hillshader" );
+  }, "water_stream" );
 
   console.log(map);
 

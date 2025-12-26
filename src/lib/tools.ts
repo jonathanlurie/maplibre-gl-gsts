@@ -178,7 +178,7 @@ export async function loadImgFetch(url: string): Promise<HTMLImageElement | null
   });
 }
 
-export async function fetchAsImageBitmap(url: string, abortSignal: AbortSignal): Promise<ImageBitmap> {
+export async function fetchAsImageBitmap(url: string, abortSignal?: AbortSignal): Promise<ImageBitmap> {
   const response = await fetch(url, {signal: abortSignal});
   if (!response.ok) {
     throw new Error(`Fetch failed: ${response.status}`);
@@ -332,11 +332,40 @@ export function filterFloatImage(fImg: FloatImage, filter: FloatImageFilter): Fl
 }
 
 
-export function makeEaseOuSineFilter(maxValue: number, scale: number): FloatImageFilter {
+export function makeEaseOutSineFilter(maxValue: number, scale: number): FloatImageFilter {
   return (value: number) => {
     return Math.sin(((Math.min(value, maxValue) / maxValue) * Math.PI) / 2) * scale;
   }
 }
+
+export function makeLinearFilter(maxValue: number, scale: number): FloatImageFilter {
+  return (value: number) => {
+    return (Math.min(value, maxValue) / maxValue) * scale;
+  }
+}
+
+export function makeEaseOutQuadFilter(maxValue: number, scale: number): FloatImageFilter {
+  return (value: number) => {
+    const input = Math.min(value, maxValue) / maxValue;
+    return (1 - (1-input)*(1-input)) * scale;
+  }
+}
+
+export function makeEaseOutCubicFilter(maxValue: number, scale: number): FloatImageFilter {
+  return (value: number) => {
+    const input = (1 - (1 - (Math.min(value, maxValue) / maxValue)) ** 3 );
+    return input * scale;
+  }
+}
+
+
+export function makeEaseInOutSineFilter(maxValue: number, scale: number): FloatImageFilter {
+  return (value: number) => {
+    const input = Math.min(value, maxValue) / maxValue;
+    return (-(Math.cos(Math.PI * input) - 1) / 2) * scale;
+  }
+}
+
 
 export function wrapTileIndex(tileIndex: TileIndex): TileIndex {
   const nbTilePerAxis = 2 ** tileIndex.z;
