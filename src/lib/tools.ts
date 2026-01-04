@@ -61,7 +61,7 @@ export function gaussianBlurImageData(
   input: FloatImage,
   kernelRadius: number,
 ): FloatImage {
-  const kernel = buildGaussianKernelFromRadius(kernelRadius);
+  const kernel = buildGaussianKernelFromRadius(kernelRadius);  
   const convolvedH = convolve1D(input, kernel, true);
   const convolvedV = convolve1D(convolvedH, kernel, false);
   return convolvedV;

@@ -15,9 +15,16 @@ const f2 = async () => {
     color: [12, 34, 69],
   });
 
-  const tileImageBitmap = await gsts.computeTile(
-    {z: 16, x: 34261, y: 23134}
+  const tileImageBitmap = await gsts.computeTileGl(
+    // {z: 16, x: 34261, y: 23134}
+    // {z: 10, x: 532, y: 363}
+    {z: 11, x: 1066, y: 728}
   );
+
+  if (!tileImageBitmap) {
+    throw new Error("Tile is null");
+  }
+
   const canvas = imageBitmapToCanvas(tileImageBitmap);
   appDiv.append(canvas);
 }
@@ -46,9 +53,15 @@ const f3 = async () => {
       const x = Number.parseInt(urlParams.get("x") as string);
       const y = Number.parseInt(urlParams.get("y") as string);
       
-      const tile = await gsts.computeTile({ z, x, y }, { abortSignal: abortController?.signal });
+      const tile = await gsts.computeTileGl({ z, x, y }, { abortSignal: abortController?.signal });
 
       // MapLibre protocols can return ImageBitmap directly
+      // MapLibre custom protocols can return these raster data types:
+      // - ImageBitmap (what you're using)
+      // - HTMLImageElement
+      // - ImageData
+      // - ArrayBuffer (for encoded image formats like PNG, JPEG, WebP)
+      // - { data: Uint8Array | Uint8ClampedArray, width: number, height: number } (raw RGBA pixels)
       return { data: tile };
     } catch (err) {
       if (abortController?.signal?.aborted) {
@@ -97,6 +110,8 @@ const f3 = async () => {
     maxPitch: 80,
   });
 
+  map.showTileBoundaries = true;
+
   await new Promise((resolve) => map.on("load", resolve));
 
 
@@ -106,7 +121,7 @@ const f3 = async () => {
     type: "raster",
     tiles: ["gsts://info?z={z}&x={x}&y={y}"],
     tileSize: 512,
-    maxzoom: 16,
+    maxzoom: 14,
   });
 
   map.addLayer({

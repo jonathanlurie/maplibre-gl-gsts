@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
+    "@webgpu/types": "^0.1.68",
+    "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@7.2.5"
   },
   "overrides": {
@@ -19,6 +20,7 @@
     "basemapkit": "^0.5.0",
     "maplibre-gl": "^5.15.0",
     "pmtiles": "^4.3.1",
-    "quick-lru": "^7.3.0"
+    "quick-lru": "^7.3.0",
+    "raster-gl": "file:../raster-gl/raster-gl-0.1.0.tgz"
   }
 }
