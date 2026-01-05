@@ -1,4 +1,4 @@
-import type { TileProcesingWorkerMessage } from "./GSTS"
+import type { TileProcesingWorkerMessage } from "./ShadyGroove"
 import { computeElevationDelta, filterFloatImage, floatImageToCanvas, gaussianBlurImageData, getElevationData, imageBitmapToOffscreenCanvas, makeEaseInOutSineFilter, makeEaseOutCubicFilter, makeEaseOutQuadFilter, makeEaseOutSineFilter, makeLinearFilter, sumFloatImages, trimPaddedTile } from "./tools";
 
 

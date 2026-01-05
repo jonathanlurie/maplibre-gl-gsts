@@ -1,11 +1,13 @@
 import { TileCache } from "./TileCache";
-import { buildGaussianKernelFromRadius, createPaddedTileOffscreenCanvas, getNeighborIndex } from "./tools";
+import { buildGaussianKernelFromRadius, clamp, createPaddedTileOffscreenCanvas, getNeighborIndex } from "./tools";
 import type { RGBColor, TileIndex } from "./types";
 import TileWorker from "./tile-worker?worker&inline";
 import { defaultGaussianScaleSpaceWeights, type GaussianScaleSpaceWeights, type GaussianScaleSpaceWeightsPerZoomLevel } from "./gaussianScaleSpaceWeights";
 import { ProcessingNode, RasterContext, Texture, UNIFORM_TYPE } from "raster-gl";
+import type { AddProtocolAction, RequestParameters, SourceSpecification } from "maplibre-gl";
 
 export type TerrainEncoding = "terrarium" | "mapbox";
+
 
 const terrariumToElevation = `
 // Decoding Terrarium encoding
@@ -147,19 +149,20 @@ export type TileProcesingWorkerMessage = {
   tileSize: number,
 }
 
-export type GSTSOptions = {
+export type ShadyGrooveOptions = {
   urlPattern: string,
   terrainEncoding: TerrainEncoding;
   gaussianScaleSpaceWeights?: GaussianScaleSpaceWeightsPerZoomLevel
   color?: RGBColor,
-  minzoom: 0,
-  maxzoom: 12,
+  alpha?: number,
+  minzoom?: number
+  maxzoom?: number,
 }
 
 /**
  * Gaussian Scale-space Terrain Shading
  */
-export class GSTS {
+export class ShadyGroove {
   private readonly urlPattern: string;
   private readonly tileCache = new TileCache();
   private readonly padding = 60;
@@ -170,8 +173,19 @@ export class GSTS {
   private lowPassHorizontalNode!: ProcessingNode;
   private lowPassVerticalNode!: ProcessingNode;
   private combineNode!: ProcessingNode;
+  private readonly minzoom: number;
+  private readonly maxzoom: number;
+  private readonly alpha: number;
 
-  constructor(options: GSTSOptions) {
+  /**
+   * Get the name of the protocol, to be used with `maplibregl.addProtocol()`
+   */
+  static get protocolName(): string {
+    return "shadygroove";
+  }
+
+
+  constructor(options: ShadyGrooveOptions) {
     this.urlPattern = options.urlPattern;
     this.terrainEncoding = options.terrainEncoding;
     this.gaussianScaleSpaceWeights = {
@@ -179,6 +193,57 @@ export class GSTS {
       ...(options.gaussianScaleSpaceWeights ?? {}),
     }
     this.color = options.color ?? [0, 0, 0];
+    this.alpha = options.alpha ? clamp(0, 1, options.alpha) : 0.75;
+    this.minzoom = options.minzoom ? clamp(0, 22, options.minzoom) : 0;
+    this.maxzoom = options.maxzoom ? clamp(0, 22, options.maxzoom) : 12;
+  }
+
+  get protocolName(): string {
+    return ShadyGroove.protocolName;
+  }
+
+  createSourceSpecification(): SourceSpecification {
+    return {
+      type: "raster",
+      tiles: [`${ShadyGroove.protocolName}://tile?z={z}&x={x}&y={y}`],
+      minzoom: this.minzoom,
+      maxzoom: this.maxzoom,
+    }
+  }
+
+  /**
+   * Get the protocol tile loading function for maplibregl.addProtocol().
+   * Tile are computed on WebGL by default (faster) but this can be disabled to
+   * compute tiles on pure JS on a webworker
+   */
+  getProtocolLoadFunction(options: {webgl: boolean} = {webgl: true}): AddProtocolAction {
+    const f = async (requestParameters: RequestParameters, abortController: AbortController) => {
+      const url = requestParameters.url;
+      try {
+        const urlObj = new URL(url);
+        const urlParams = urlObj.searchParams
+        const z = Number.parseInt(urlParams.get("z") as string);
+        const x = Number.parseInt(urlParams.get("x") as string);
+        const y = Number.parseInt(urlParams.get("y") as string);
+
+        let tile: ImageBitmap | null;
+
+        if (options.webgl) {
+          tile = await this.computeTileGl({ z, x, y }, { abortSignal: abortController?.signal });
+        } else {
+          tile = await this.computeTile({ z, x, y }, { abortSignal: abortController?.signal });
+        }
+  
+        return { data: tile };
+      } catch (err) {
+        if (abortController?.signal?.aborted) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        throw err;
+      }
+    }
+
+    return f;
   }
 
   private initGl(tileSize: number) {

@@ -1,4 +1,4 @@
-import type { TerrainEncoding } from "./GSTS";
+import type { TerrainEncoding } from "./ShadyGroove";
 import type { RGBColor, TileIndex } from "./types";
 
 export type FloatImage = {
@@ -14,7 +14,7 @@ const Z_FOR_CENTRAL_MASS: Record<number, number> = {
   0.98: 2.326348,
   0.99: 2.575829,
   0.995: 2.807034,
-  0.997: 3.0,      // common rule-of-thumb (≈ 99.73%)
+  0.997: 3.0,
   0.999: 3.290527
 };
 
@@ -29,7 +29,7 @@ export function sigmaFromRadius(
 
 export function buildGaussianKernelFromRadius(
   radius: number,
-  centralMass: 0.90 | 0.95 | 0.98 | 0.99 | 0.995 | 0.997 | 0.999 = 0.95
+  centralMass: 0.90 | 0.95 | 0.98 | 0.99 | 0.995 | 0.997 | 0.999 = 0.99
 ): Float32Array {
   const sigma = sigmaFromRadius(radius, centralMass);
   return buildGaussianKernel(radius, sigma);
@@ -425,9 +425,6 @@ export function createPaddedTileOffscreenCanvas(mosaic: Array<ImageBitmap | null
   }
 
   const finalSize = ts + 2 * padding;
-  // const canvas = document.createElement("canvas")
-  // canvas.width = finalSize;
-  // canvas.height = finalSize;
   const canvas = new OffscreenCanvas(finalSize, finalSize);
   const ctx = canvas.getContext("2d");
 
@@ -552,4 +549,9 @@ export function imageBitmapToCanvas(imageBitmap: ImageBitmap): HTMLCanvasElement
 
   ctx.drawImage(imageBitmap, 0, 0);
   return canvas;
+}
+
+
+export function clamp(min: number, max: number, value: number): number {
+  return Math.min(max, Math.max(min, value));
 }
