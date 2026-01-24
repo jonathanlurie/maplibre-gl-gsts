@@ -87,6 +87,7 @@ out vec4 fragColor;
 
 uniform vec3 u_tint;
 
+uniform float u_alpha;
 uniform float u_weightLowPass_3;
 uniform float u_weightLowPass_7;
 uniform float u_weightLowPass_15;
@@ -131,6 +132,8 @@ void main() {
   float easedValue = easeOutSine(multiresWeightedDelta, 2000., 1.);
 
   fragColor = vec4(u_tint.r, u_tint.g, u_tint.b, easedValue);
+  fragColor.a *= u_alpha;
+
 }
 
 `.trim();
@@ -149,13 +152,55 @@ export type TileProcesingWorkerMessage = {
   tileSize: number,
 }
 
+export type CustomTileImageBitmapMaker = (tileIndex: TileIndex, abortSignal?: AbortSignal) => Promise<ImageBitmap | null>
+
 export type ShadyGrooveOptions = {
-  urlPattern: string,
+  /**
+   * A URL pattern such as "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
+   * Alternatively, the option customTileImageBitmapMaker is a way to
+   * source tiles from a custom source, such as a PMTiles file.
+   * If both are provided, the option `urlPattern` prevails overs `customTileImageBitmapMaker`.
+   */
+  urlPattern?: string,
+
+  /**
+   * A custom function to source raster terrain tile as ImageBitmap.
+   * If bother are provided, the option `urlPattern` prevails overs `customTileImageBitmapMaker`.
+   */
+  customTileImageBitmapMaker?: CustomTileImageBitmapMaker,
+
+  /**
+   * Terrain encoding: "mapbox" or "terrarium"
+   */
   terrainEncoding: TerrainEncoding;
+
+  /**
+   * Custom weights of each gaussian scale on each zoom levels.
+   * Default: using the built-in
+   */
   gaussianScaleSpaceWeights?: GaussianScaleSpaceWeightsPerZoomLevel
+
+  /**
+   * Color of the shade as RGB with values in [0, 255]
+   * Default: 
+   */
   color?: RGBColor,
+
+  /**
+   * Opacity of the layer in [0, 1]
+   */
   alpha?: number,
+
+  /**
+   * Min zoom level.
+   * Default: 0
+   */
   minzoom?: number
+
+  /**
+   * Max zoom level.
+   * Default: 12
+   */
   maxzoom?: number,
 }
 
@@ -412,6 +457,7 @@ export class ShadyGroove {
 
     this.combineNode.setUniformRGB("u_tint", this.color);
     this.combineNode.setUniformTexture2D("u_tile", tex);
+    this.combineNode.setUniformNumber("u_alpha", this.alpha);
     this.combineNode.setUniformNumber("u_weightLowPass_3", gaussianScaleSpaceWeights.hKernel3);
     this.combineNode.setUniformNumber("u_weightLowPass_7", gaussianScaleSpaceWeights.hKernel7);
     this.combineNode.setUniformNumber("u_weightLowPass_15", gaussianScaleSpaceWeights.hKernel15);

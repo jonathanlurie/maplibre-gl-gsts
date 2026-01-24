@@ -42,6 +42,7 @@ const f3 = async () => {
     terrainEncoding,
     color: [36, 70, 125],
     maxzoom: 16,
+    alpha: 0.5,
   });
 
 
@@ -61,7 +62,7 @@ const f3 = async () => {
       tilejson: mapterhornTileJson,
       encoding: terrainEncoding,
       hillshading: true,
-      exaggeration: 1,
+      // exaggeration: 1,
     }
   });
 
@@ -88,9 +89,9 @@ const f3 = async () => {
     layout: {
       visibility: "visible"
     },
-    paint: {
-      "raster-opacity": 0.75
-    }
+    // paint: {
+    //   "raster-opacity": 0.75
+    // }
   }, "water_stream" );
 
   console.log(map);
