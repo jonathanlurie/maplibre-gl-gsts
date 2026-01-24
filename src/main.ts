@@ -1,10 +1,11 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import './style.css'
-import { Protocol } from "pmtiles";
+import { Protocol, PMTiles, TileType } from "pmtiles";
 import {imageBitmapToCanvas } from './lib/tools.ts';
 import { ShadyGroove } from './lib/ShadyGroove.ts';
 import { getStyle } from 'basemapkit';
 import maplibregl from 'maplibre-gl';
+import type { TileIndex } from "./lib/types.ts";
 
 const appDiv = document.getElementById('app') as HTMLDivElement;
 
@@ -88,10 +89,7 @@ const f3 = async () => {
     type: 'raster',
     layout: {
       visibility: "visible"
-    },
-    // paint: {
-    //   "raster-opacity": 0.75
-    // }
+    }
   }, "water_stream" );
 
   console.log(map);
@@ -112,4 +110,118 @@ const f3 = async () => {
   
 } 
 
-f3();
+
+
+
+// Using pmtiles for terrain and custom loading function
+const f4 = async () => {
+  // Keeping a ref so that 
+  const pmTilesProtocol = new Protocol();
+
+  // Register the PMTiles protocol
+  maplibregl.addProtocol("pmtiles", pmTilesProtocol.tile);
+
+  const pmtilesTerrain = "https://fsn1.your-objectstorage.com/public-map-data/pmtiles/terrain-mapterhorn.pmtiles";
+  const terrainEncoding = "terrarium";
+  
+  const style = getStyle("avenue", {
+    pmtiles: "https://fsn1.your-objectstorage.com/public-map-data/pmtiles/planet.pmtiles",
+    sprite: "https://raw.githubusercontent.com/jonathanlurie/phosphor-mlgl-sprite/refs/heads/main/sprite/phosphor-diecut",
+    glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
+    lang: "en",
+    hidePOIs: true,
+    globe: true,
+    terrain: {
+      pmtiles: pmtilesTerrain,
+      encoding: terrainEncoding,
+      hillshading: true,
+    }
+  });  
+
+  const map = new maplibregl.Map({
+    container: "app",
+    hash: true,
+    style: style,
+    maxPitch: 80,
+  });
+
+  await new Promise((resolve) => map.on("load", resolve));
+
+  // Getting the PMTiles instnace that is already used to display hillshading
+  const terrainPm = pmTilesProtocol.tiles.get(pmtilesTerrain);
+
+  if (!terrainPm) {
+    throw new Error("The PMTiles instance for terrain does not exist.");
+  }
+
+  const terrainPmHeader = await terrainPm.getHeader();
+
+  const tileTypeToMime: Record<number, string> = {
+    [TileType.Avif]: "image/avif",
+    [TileType.Jpeg]: "image/jpeg",
+    [TileType.Webp]: "image/webp",
+    [TileType.Png]: "image/png",
+  };
+  
+  const tileMime = tileTypeToMime[terrainPmHeader.tileType];
+  
+  if (!tileMime) {
+    throw new Error("The terrain tile format must be avif, jpeg, webp or png.")
+  }
+
+  // This is the customTileImageBitmapMaker callback for the ShadyGroove instance
+  // as an alternative to providing a URL pattern for {z}{x}{y} tiles.
+  // Here we are reusing the the PMTiles instance that is internal to the PMTiles' Protocol
+  // instance declared above so that we can reuse the cached tiles originally used for hillshading
+  const tileIndexToImageBitmap = async (tileIndex: TileIndex, abortSignal?: AbortSignal): Promise<ImageBitmap | null> => {
+    const tileRangeResponse = await terrainPm.getZxy(tileIndex.z, tileIndex.x, tileIndex.y, abortSignal);  
+    const tileBuffer = tileRangeResponse?.data;
+
+    if (!tileBuffer) {
+      return null;
+    }
+  
+    const blob = new Blob([tileBuffer], { type: tileMime });    
+    return await createImageBitmap(blob);
+  }
+
+  // 
+  const sg = new ShadyGroove({
+    customTileImageBitmapMaker: tileIndexToImageBitmap,
+    terrainEncoding,
+    color: [36, 70, 125],
+    maxzoom: terrainPmHeader.maxZoom,
+    minzoom: terrainPmHeader.minZoom,
+    alpha: 0.5,
+  });
+
+  // Register custom protocol: shadygroove://{z}/{x}/{y}
+  maplibregl.addProtocol(sg.protocolName, sg.getProtocolLoadFunction());
+
+  // Adding the tile source for our ShadyGroove layer
+  map.addSource("sg-demo-source", sg.createSourceSpecification());
+
+  // Adding the ShadyGroove layer
+  map.addLayer({
+    id: 'sg-demo-layer',
+    source: 'sg-demo-source',
+    type: 'raster',
+    layout: {
+      visibility: "visible"
+    }
+  }, "water_stream" );
+
+  // Adding a checkbox to toggle the visibility of the ShadyGroove layer
+  const checkboxLayer = document.getElementById("toggle-layer-cb") as HTMLInputElement;
+  checkboxLayer.addEventListener("input", () => {
+    const isVisible = map.getLayoutProperty("sg-demo-layer", "visibility") === "visible";
+    if (isVisible) {
+      map.setLayoutProperty("sg-demo-layer", "visibility", "none");
+    } else {
+      map.setLayoutProperty("sg-demo-layer", "visibility", "visible");
+    }
+  })
+  
+} 
+
+f4();

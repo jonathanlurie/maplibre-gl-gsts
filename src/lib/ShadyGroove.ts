@@ -130,16 +130,10 @@ void main() {
     + (eleDeltaLowPass60 * u_weightLowPass_60);
 
   float easedValue = easeOutSine(multiresWeightedDelta, 2000., 1.);
-
   fragColor = vec4(u_tint.r, u_tint.g, u_tint.b, easedValue);
   fragColor.a *= u_alpha;
-
 }
-
 `.trim();
-
-
-
 
 
 export type TileProcesingWorkerMessage = {
@@ -208,7 +202,8 @@ export type ShadyGrooveOptions = {
  * Gaussian Scale-space Terrain Shading
  */
 export class ShadyGroove {
-  private readonly urlPattern: string;
+  private readonly urlPattern: string | null = null;
+  private readonly customTileImageBitmapMaker: CustomTileImageBitmapMaker | null = null;
   private readonly tileCache = new TileCache();
   private readonly padding = 60;
   private readonly terrainEncoding: TerrainEncoding;
@@ -231,7 +226,13 @@ export class ShadyGroove {
 
 
   constructor(options: ShadyGrooveOptions) {
-    this.urlPattern = options.urlPattern;
+    this.urlPattern = options.urlPattern ?? null;
+    this.customTileImageBitmapMaker = options.customTileImageBitmapMaker ?? null;
+
+    if (!this.urlPattern && !this.customTileImageBitmapMaker) {
+      throw new Error("One of the option 'urlPattern' or 'customTileImageBitmapMaker' must be provided.");
+    }
+
     this.terrainEncoding = options.terrainEncoding;
     this.gaussianScaleSpaceWeights = {
       ...defaultGaussianScaleSpaceWeights,
@@ -331,17 +332,7 @@ export class ShadyGroove {
       abortSignal?: AbortSignal,
     } = {}
   ): Promise<ImageBitmap | null> {
-    const tilePromises = await Promise.allSettled([
-      this.tileCache.getTile(tileIndex, this.urlPattern, options.abortSignal), // center
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern, options.abortSignal), // north
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NE"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "E"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SE"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "S"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SW"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "W"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern, options.abortSignal),
-    ]);
+    const tilePromises = await Promise.allSettled(this.makeTilePromises(tileIndex, options));
 
     if (tilePromises[0].status !== "fulfilled" || !tilePromises[0].value) {
       return null;
@@ -386,26 +377,47 @@ export class ShadyGroove {
 
 
 
+  private makeTilePromises(tileIndex: TileIndex,
+    options: {
+      abortSignal?: AbortSignal,
+    } = {}): Promise<ImageBitmap | null>[] {
+    if (this.urlPattern) {
+      return [
+        this.tileCache.getTile(tileIndex, this.urlPattern, options.abortSignal), // center
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern, options.abortSignal), // north
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "NE"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "E"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "SE"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "S"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "SW"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "W"), this.urlPattern, options.abortSignal),
+        this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern, options.abortSignal),
+      ];
+    }
 
+    if (this.customTileImageBitmapMaker) {
+      return [
+        this.customTileImageBitmapMaker(tileIndex, options.abortSignal), // center
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "N"), options.abortSignal), // north
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "NE"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "E"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "SE"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "S"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "SW"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "W"), options.abortSignal),
+        this.customTileImageBitmapMaker(getNeighborIndex(tileIndex, "NW"), options.abortSignal),
+      ]
+    }
 
-
+    return [];
+  }
 
   async computeTileGl(tileIndex: TileIndex,
     options: {
       abortSignal?: AbortSignal,
     } = {}
   ): Promise<ImageBitmap | null> {
-    const tilePromises = await Promise.allSettled([
-      this.tileCache.getTile(tileIndex, this.urlPattern, options.abortSignal), // center
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "N"), this.urlPattern, options.abortSignal), // north
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NE"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "E"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SE"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "S"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "SW"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "W"), this.urlPattern, options.abortSignal),
-      this.tileCache.getTile(getNeighborIndex(tileIndex, "NW"), this.urlPattern, options.abortSignal),
-    ]);    
+    const tilePromises = await Promise.allSettled(this.makeTilePromises(tileIndex, options));    
 
     if (tilePromises[0].status !== "fulfilled" || !tilePromises[0].value) {
       return null;
@@ -422,9 +434,6 @@ export class ShadyGroove {
     const gaussianScaleSpaceWeights = this.gaussianScaleSpaceWeights[tileIndex.z];
 
     this.initGl(tileSize);
-
-    console.time("compute GL");
-
     const tex = Texture.fromImageSource(this.rctx, paddedTile);
     
     const lowPassTextures: Record<number, Texture | null> = {
@@ -471,9 +480,6 @@ export class ShadyGroove {
     this.combineNode.setUniformTexture2D("u_tileLowPass_60", lowPassTextures[60] as Texture);
 
     this.combineNode.render();
-
-    // const pixelData = combineNode.getPixelData();
-    console.timeEnd("compute GL");
 
     const imageBitmap = await this.combineNode.getImageBitmap({
       x: this.padding,
