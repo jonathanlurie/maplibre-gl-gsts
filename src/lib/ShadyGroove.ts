@@ -4,10 +4,9 @@ import type { RGBColor, TileIndex } from "./types";
 import TileWorker from "./tile-worker?worker&inline";
 import { defaultGaussianScaleSpaceWeights, type GaussianScaleSpaceWeights, type GaussianScaleSpaceWeightsPerZoomLevel } from "./gaussianScaleSpaceWeights";
 import { ProcessingNode, RasterContext, Texture, UNIFORM_TYPE } from "raster-gl";
-import type { AddProtocolAction, RequestParameters, SourceSpecification } from "maplibre-gl";
+import type { AddProtocolAction, RequestParameters } from "maplibre-gl";
 
 export type TerrainEncoding = "terrarium" | "mapbox";
-
 
 const terrariumToElevation = `
 // Decoding Terrarium encoding
@@ -135,7 +134,7 @@ void main() {
 }
 `.trim();
 
-
+// Options for web worker when computation is on CPU
 export type TileProcesingWorkerMessage = {
   tileIndex: TileIndex,
   paddedTile: ImageBitmap,
@@ -216,14 +215,10 @@ export class ShadyGroove {
   private readonly minzoom: number;
   private readonly maxzoom: number;
   private readonly alpha: number;
-
-  /**
-   * Get the name of the protocol, to be used with `maplibregl.addProtocol()`
-   */
-  static get protocolName(): string {
-    return "shadygroove";
-  }
-
+  private readonly sourceId = `sg_source-${Math.random().toFixed(6).split(".").pop()}`;
+  private readonly layerId = `sg_layer-${Math.random().toFixed(6).split(".").pop()}`;
+  private readonly protocolName = `shadygroove-${Math.random().toFixed(6).split(".").pop()}`;
+  private map: maplibregl.Map | null = null;
 
   constructor(options: ShadyGrooveOptions) {
     this.urlPattern = options.urlPattern ?? null;
@@ -244,17 +239,11 @@ export class ShadyGroove {
     this.maxzoom = options.maxzoom ? clamp(0, 22, options.maxzoom) : 12;
   }
 
-  get protocolName(): string {
-    return ShadyGroove.protocolName;
-  }
-
-  createSourceSpecification(): SourceSpecification {
-    return {
-      type: "raster",
-      tiles: [`${ShadyGroove.protocolName}://tile?z={z}&x={x}&y={y}`],
-      minzoom: this.minzoom,
-      maxzoom: this.maxzoom,
-    }
+  /**
+   * Get the custom protocol name specific to this ShadyGroove instance
+   */
+  getProtocolName(): string {
+    return this.protocolName;
   }
 
   /**
@@ -326,7 +315,11 @@ export class ShadyGroove {
     });
   }
 
-
+  /**
+   * Compute a tile as an ImageBitmap, using CPU.
+   * This function is somewhat internal but left public for debugging purpose
+   * or to export  static asset.
+   */
   async computeTile(tileIndex: TileIndex,
     options: {
       abortSignal?: AbortSignal,
@@ -354,7 +347,6 @@ export class ShadyGroove {
         console.log("ABORT tile: ", tileIndex);
         tileWorker.terminate();
       },
-      // { once: true },
     );
 
       tileWorker.postMessage({
@@ -371,11 +363,8 @@ export class ShadyGroove {
         tileWorker.terminate();
         resolve(e.data)
       }
-      
     })
   }
-
-
 
   private makeTilePromises(tileIndex: TileIndex,
     options: {
@@ -412,6 +401,11 @@ export class ShadyGroove {
     return [];
   }
 
+  /**
+   * Compute a tile as an ImageBitmap using GPU.
+   * This function is somewhat internal but left public for debugging purpose
+   * or to export  static asset.
+   */
   async computeTileGl(tileIndex: TileIndex,
     options: {
       abortSignal?: AbortSignal,
@@ -491,6 +485,67 @@ export class ShadyGroove {
     this.rctx.free();
 
     return imageBitmap
+  }
+
+
+  /**
+   * Add the ShadyGroove layer to the map
+   */
+  addToMap(map: maplibregl.Map, beforeId?: string): {sourceId: string, layerId: string} {
+    this.map = map;
+
+    // Adding the tile source for our ShadyGroove layer
+    map.addSource(this.sourceId, {
+      type: "raster",
+      tiles: [`${this.protocolName}://tile?z={z}&x={x}&y={y}`],
+      minzoom: this.minzoom,
+      maxzoom: this.maxzoom,
+    });
+
+    // Adding the ShadyGroove layer
+    map.addLayer({
+      id: this.layerId,
+      source: this.sourceId,
+      type: 'raster',
+      layout: {
+        visibility: "visible"
+      }
+    }, beforeId);
+
+    return {
+      sourceId: this.sourceId,
+      layerId: this.layerId,
+    };
+  }
+
+  /**
+   * 
+   * @param isVisible 
+   * @returns 
+   */
+  setVisibility(isVisible: boolean) {
+    if (!this.map) {
+      console.warn("This layer is not yet added to the map.");
+      return;
+    }
+
+    if (isVisible) {
+      this.map.setLayoutProperty(this.layerId, "visibility", "visible");
+    } else {
+      this.map.setLayoutProperty(this.layerId, "visibility", "none");
+    }
+  }
+
+  /**
+   * Get if the layer is visible
+   */
+  isVisible() {
+    if (!this.map) {
+      console.warn("This layer is not yet added to the map.");
+      return false;
+    }
+
+    return this.map.getLayoutProperty(this.layerId, "visibility") === "visible";
   }
 }
 

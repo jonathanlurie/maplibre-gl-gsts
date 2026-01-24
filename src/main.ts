@@ -1,6 +1,6 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import './style.css'
-import { Protocol, PMTiles, TileType } from "pmtiles";
+import { Protocol, TileType } from "pmtiles";
 import {imageBitmapToCanvas } from './lib/tools.ts';
 import { ShadyGroove } from './lib/ShadyGroove.ts';
 import { getStyle } from 'basemapkit';
@@ -33,7 +33,6 @@ const f2 = async () => {
 const f3 = async () => {
   maplibregl.addProtocol("pmtiles", new Protocol().tile);
 
-  const pmtilesTerrain = "https://fsn1.your-objectstorage.com/public-map-data/pmtiles/terrain-mapterhorn.pmtiles";
   const terrainEncoding = "terrarium";
   const mapterhornTileJson = "https://tiles.mapterhorn.com/tile.json";
   const mapterhornUrlPattern = "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
@@ -46,10 +45,8 @@ const f3 = async () => {
     alpha: 0.5,
   });
 
-
-  // Register custom protocol: shadygroove://{z}/{x}/{y}
-  maplibregl.addProtocol(ShadyGroove.protocolName, sg.getProtocolLoadFunction());
-
+  // Register custom protocolfor this instance of ShadyGroove
+  maplibregl.addProtocol(sg.getProtocolName(), sg.getProtocolLoadFunction());
 
   const style = getStyle("avenue", {
     pmtiles: "https://fsn1.your-objectstorage.com/public-map-data/pmtiles/planet.pmtiles",
@@ -59,11 +56,9 @@ const f3 = async () => {
     hidePOIs: true,
     globe: true,
     terrain: {
-      // pmtiles: pmtilesTerrain,
       tilejson: mapterhornTileJson,
       encoding: terrainEncoding,
       hillshading: true,
-      // exaggeration: 1,
     }
   });
 
@@ -81,33 +76,13 @@ const f3 = async () => {
 
   await new Promise((resolve) => map.on("load", resolve));
 
-  map.addSource("sg-demo-source", sg.createSourceSpecification());
+  sg.addToMap(map, "water_stream");
 
-  map.addLayer({
-    id: 'sg-demo-layer',
-    source: 'sg-demo-source',
-    type: 'raster',
-    layout: {
-      visibility: "visible"
-    }
-  }, "water_stream" );
-
-  console.log(map);
-
+  // Adding a checkbox to toggle the visibility of the ShadyGroove layer
   const checkboxLayer = document.getElementById("toggle-layer-cb") as HTMLInputElement;
-  checkboxLayer.addEventListener("input", () => {
-    console.log(checkboxLayer.checked);
-
-    const isVisible = map.getLayoutProperty("sg-demo-layer", "visibility") === "visible";
-
-    if (isVisible) {
-      map.setLayoutProperty("sg-demo-layer", "visibility", "none");
-    } else {
-      map.setLayoutProperty("sg-demo-layer", "visibility", "visible");
-    }
-     
+  checkboxLayer.addEventListener("change", () => {
+    sg.setVisibility(checkboxLayer.checked)
   })
-  
 } 
 
 
@@ -185,7 +160,6 @@ const f4 = async () => {
     return await createImageBitmap(blob);
   }
 
-  // 
   const sg = new ShadyGroove({
     customTileImageBitmapMaker: tileIndexToImageBitmap,
     terrainEncoding,
@@ -195,33 +169,17 @@ const f4 = async () => {
     alpha: 0.5,
   });
 
-  // Register custom protocol: shadygroove://{z}/{x}/{y}
-  maplibregl.addProtocol(sg.protocolName, sg.getProtocolLoadFunction());
+  // Register custom protocol for this instance of ShadyGroove
+  maplibregl.addProtocol(sg.getProtocolName(), sg.getProtocolLoadFunction());
 
-  // Adding the tile source for our ShadyGroove layer
-  map.addSource("sg-demo-source", sg.createSourceSpecification());
-
-  // Adding the ShadyGroove layer
-  map.addLayer({
-    id: 'sg-demo-layer',
-    source: 'sg-demo-source',
-    type: 'raster',
-    layout: {
-      visibility: "visible"
-    }
-  }, "water_stream" );
+  sg.addToMap(map, "water_stream");
 
   // Adding a checkbox to toggle the visibility of the ShadyGroove layer
   const checkboxLayer = document.getElementById("toggle-layer-cb") as HTMLInputElement;
-  checkboxLayer.addEventListener("input", () => {
-    const isVisible = map.getLayoutProperty("sg-demo-layer", "visibility") === "visible";
-    if (isVisible) {
-      map.setLayoutProperty("sg-demo-layer", "visibility", "none");
-    } else {
-      map.setLayoutProperty("sg-demo-layer", "visibility", "visible");
-    }
+  checkboxLayer.addEventListener("change", () => {
+    sg.setVisibility(checkboxLayer.checked)
   })
   
 } 
 
-f4();
+f3();
